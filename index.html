@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>关系气场测评</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:"PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif;
+  background:#0d0a1a;
+  color:#f0e6f6;
+  min-height:100vh;
+  display:flex;justify-content:center;align-items:center;
+}
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse 80% 60% at 30% 20%,rgba(180,100,220,.18),transparent),
+             radial-gradient(ellipse 60% 70% at 70% 60%,rgba(220,120,160,.15),transparent),
+             radial-gradient(ellipse 50% 50% at 50% 80%,rgba(140,80,200,.12),transparent);
+}
+#app{position:relative;z-index:1;width:100%;max-width:460px;min-height:100vh;padding:20px}
+
+/* 通用隐藏 */
+.hidden{display:none!important}
+
+/* 按钮 */
+.btn{
+  display:block;width:100%;max-width:280px;margin:0 auto;
+  padding:14px 40px;border-radius:28px;font-size:16px;font-weight:600;
+  border:none;cursor:pointer;color:#fff;text-align:center;
+  background:linear-gradient(135deg,#d478c5,#9b6dff);
+  box-shadow:0 4px 24px rgba(180,100,220,.35);
+  transition:transform .2s;
+}
+.btn:active{transform:scale(.96)}
+.btn.outline{
+  background:transparent;border:1.5px solid rgba(200,160,220,.4);
+  box-shadow:none;color:#d478c5;
+}
+
+/* ===== 开场页 ===== */
+#page-start{display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;min-height:calc(100vh - 40px)}
+#page-start .icon{font-size:56px;margin-bottom:16px;animation:float 3s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+#page-start h1{font-size:28px;font-weight:700;background:linear-gradient(135deg,#d478c5,#9b6dff,#f5a0c0);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px}
+#page-start .sub{color:#a898b8;font-size:14px;margin-bottom:32px;line-height:1.6}
+#page-start .tag{display:inline-block;padding:6px 16px;border-radius:20px;font-size:12px;border:1px solid rgba(180,140,200,.35);color:#a898b8;margin-bottom:28px}
+.footer-note{margin-top:24px;font-size:11px;color:rgba(180,150,200,.5)}
+
+/* ===== 答题页 ===== */
+#page-quiz{display:flex;flex-direction:column;min-height:calc(100vh - 40px)}
+.progress-wrap{width:100%;height:4px;background:rgba(255,255,255,.08);border-radius:2px;margin-bottom:10px;overflow:hidden}
+.progress-bar{height:100%;background:linear-gradient(90deg,#d478c5,#9b6dff);border-radius:2px;transition:width .35s ease}
+.progress-num{font-size:12px;color:#a898b8;text-align:right;margin-bottom:24px}
+.q-card{background:rgba(30,20,50,.85);border-radius:20px;padding:28px 22px;border:1px solid rgba(200,160,220,.12);flex:1;display:flex;flex-direction:column;backdrop-filter:blur(12px)}
+.q-title{font-size:17px;font-weight:600;margin-bottom:24px;line-height:1.5}
+.options{display:flex;flex-direction:column;gap:10px}
+.option{display:flex;align-items:center;padding:14px 16px;border-radius:14px;border:1.5px solid rgba(200,160,220,.15);background:rgba(40,28,60,.4);cursor:pointer;transition:all .2s;font-size:15px;gap:10px}
+.option:active,.option.chosen{border-color:#d478c5;background:rgba(180,120,220,.15)}
+.opt-letter{width:28px;height:28px;border-radius:50%;background:rgba(200,160,220,.15);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0}
+
+/* ===== 付费弹窗 ===== */
+.overlay{position:fixed;inset:0;background:rgba(6,4,14,.88);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px}
+.paywall-card{background:rgba(30,20,50,.92);border-radius:24px;padding:32px 24px;width:100%;max-width:380px;text-align:center;border:1px solid rgba(200,160,220,.15);backdrop-filter:blur(16px)}
+.paywall-card h3{font-size:20px;margin-bottom:6px}
+.paywall-card .price{font-size:40px;font-weight:800;color:#f0c060;margin:12px 0 4px}
+.paywall-card .price span{font-size:16px}
+.blur-preview{margin:20px 0;padding:20px;border-radius:16px;background:rgba(20,12,36,.6);filter:blur(8px);user-select:none;pointer-events:none;font-size:14px;color:#a898b8;line-height:1.7}
+.pay-lock{font-size:12px;color:#a898b8;margin:10px 0 4px}
+.pay-count{font-size:11px;color:rgba(180,150,200,.35);margin-top:8px}
+
+/* ===== 结果页 ===== */
+#page-result{min-height:calc(100vh - 40px);display:flex;flex-direction:column}
+.result-card{background:rgba(30,20,50,.85);border-radius:24px;padding:32px 22px;border:1px solid rgba(200,160,220,.14);text-align:center;backdrop-filter:blur(12px)}
+.result-emoji{font-size:64px;margin-bottom:8px}
+.result-name{font-size:26px;font-weight:700;background:linear-gradient(135deg,#d478c5,#9b6dff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px}
+.result-tagline{font-size:14px;color:#a898b8;margin-bottom:20px}
+.stats{display:flex;justify-content:space-around;margin:20px 0}
+.stat{text-align:center}
+.stat-val{font-size:28px;font-weight:700;color:#d478c5}
+.stat-lbl{font-size:11px;color:#a898b8;margin-top:2px}
+.r-section{text-align:left;margin-top:20px;padding:16px;border-radius:14px;background:rgba(30,18,48,.5);font-size:14px;line-height:1.8}
+.r-section h4{font-size:15px;margin-bottom:8px;color:#9b6dff}
+
+/* spinner */
+.spinner{width:32px;height:32px;border:3px solid rgba(200,160,220,.2);border-top-color:#d478c5;border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- 开场页 -->
+  <div id="page-start">
+    <div class="icon">🔮</div>
+    <h1>关系气场测评</h1>
+    <p class="sub">12 道灵魂拷问<br>测出你在亲密关系中的真实气场</p>
+    <div class="tag">✦ 12 题 &middot; 2 分钟 &middot; 绝对保密 ✦</div>
+    <button class="btn" id="btn-start" type="button">✨ 开始测评</button>
+    <p class="footer-note">已有 13,829 人完成测评</p>
+  </div>
+
+  <!-- 答题页 -->
+  <div id="page-quiz" class="hidden">
+    <div class="progress-wrap"><div class="progress-bar" id="pbar"></div></div>
+    <div class="progress-num" id="pnum">1 / 12</div>
+    <div class="q-card">
+      <div class="q-title" id="qtitle"></div>
+      <div class="options" id="opts"></div>
+    </div>
+  </div>
+
+  <!-- 结果页 -->
+  <div id="page-result" class="hidden">
+    <div class="result-card" id="rcard"></div>
+    <button class="btn" style="margin-top:20px" id="btn-retry">🔄 重新测评</button>
+    <button class="btn outline" style="margin-top:8px" id="btn-share">📤 分享给朋友</button>
+  </div>
+
+  <!-- 付费弹窗 -->
+  <div class="overlay hidden" id="paywall">
+    <div class="paywall-card">
+      <div>🔒</div>
+      <h3>你的气场分析已生成</h3>
+      <div class="price"><span>¥</span>0.99</div>
+      <p class="pay-lock">支付后立即解锁完整结果</p>
+      <div class="blur-preview" id="blurprev">
+        <p>你属于【秘密类型】——表面上看你是一个温和的人，但内心有着非常清晰的边界和底线。在关系中你倾向于先观察再行动……</p>
+      </div>
+      <button class="btn" id="btn-pay">🔓 支付 ¥0.99 查看结果</button>
+      <p class="pay-count">已有 <b style="color:#d478c5">3,827</b> 人解锁查看</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ==================== 支付配置 ====================
+var PAY = {
+  gateway: 'demo',  // 改成 'xorpay' 接入真实支付
+  appId: '',        // xorpay app id
+  appSecret: '',    // xorpay app secret
+  price: 0.99
+};
+
+// ==================== 题目 ====================
+var Q = [
+  {q:"当你对一个人有好感时，你的第一反应是？",o:[
+    {t:"主动靠近，制造偶遇机会",s:{A:2,D:1}},
+    {t:"默默观察，等对方先迈出一步",s:{C:2,F:1}},
+    {t:"直接示好，不掩饰自己的兴趣",s:{B:2,E:1}},
+    {t:"反复试探，确认对方心意再说",s:{E:2,B:1}}]},
+  {q:"在一段关系里，你最渴望的是什么？",o:[
+    {t:"被对方深深需要和依赖",s:{B:2,F:1}},
+    {t:"和对方一起成长、变好",s:{C:2,D:1}},
+    {t:"无条件的偏爱和宠溺",s:{E:2,B:1}},
+    {t:"彼此独立但又互相吸引",s:{A:2,D:1}}]},
+  {q:"发生矛盾时，你的典型反应是？",o:[
+    {t:"冷静沟通，就事论事",s:{C:2,A:1}},
+    {t:"先爆发情绪，再主动求和",s:{B:2,E:1}},
+    {t:"冷战不说话，等对方来哄",s:{E:2,A:1}},
+    {t:"立刻妥协，不想伤害感情",s:{F:2,B:1}}]},
+  {q:"你觉得自己在感情里最有魅力的一面是？",o:[
+    {t:"温柔细腻的照顾和陪伴",s:{F:2,A:1}},
+    {t:"若即若离的神秘感",s:{E:2,D:1}},
+    {t:"坚定而热烈的占有欲",s:{B:2,A:1}},
+    {t:"轻松有趣的幽默感",s:{D:2,F:1}}]},
+  {q:"如果对方一整天没回消息，你会？",o:[
+    {t:"继续发消息，直到收到回复",s:{B:2,E:1}},
+    {t:"心里焦虑但表面不表现出来",s:{F:2,B:1}},
+    {t:"不太在意，我也经常不回消息",s:{D:2,A:1}},
+    {t:"直接打电话问清楚怎么了",s:{A:2,E:1}}]},
+  {q:"你更习惯用哪种方式表达爱？",o:[
+    {t:"说很多甜言蜜语",s:{B:2,E:1}},
+    {t:"默默记住对方所有喜好和细节",s:{C:2,F:1}},
+    {t:"肢体接触一一拥抱、牵手、亲吻",s:{B:2,A:1}},
+    {t:"用行动一一接送、做饭、送礼物",s:{C:2,A:1}}]},
+  {q:"恋爱中最让你害怕的事情是？",o:[
+    {t:"对方不够爱我、不够在乎",s:{B:2,E:1}},
+    {t:"在关系中失去自我",s:{D:2,C:1}},
+    {t:"被欺骗或被背叛",s:{A:2,C:1}},
+    {t:"激情退去后的平淡和无聊",s:{B:2,F:1}}]},
+  {q:"朋友眼中的你，更像哪种类型？",o:[
+    {t:"可靠温柔的大姐姐",s:{A:2,C:1}},
+    {t:"需要被保护的软萌小可爱",s:{F:2,B:1}},
+    {t:"又A又飒的酷girl",s:{A:2,D:1}},
+    {t:"随性自由、捉摸不透的艺术家",s:{D:2,E:1}}]},
+  {q:"面对关系中的不确定性，你通常会？",o:[
+    {t:"主动规划，把局面掌控在手里",s:{A:2,C:1}},
+    {t:"相信直觉，走一步看一步",s:{D:2,F:1}},
+    {t:"内心焦虑但假装云淡风轻",s:{E:2,B:1}},
+    {t:"先撤退一步，保护自己不受伤",s:{C:2,E:1}}]},
+  {q:"你心目中理想的爱情更像什么？",o:[
+    {t:"细水长流的温暖陪伴",s:{F:2,C:1}},
+    {t:"轰轰烈烈的炽热燃烧",s:{B:2,E:1}},
+    {t:"势均力敌的精彩博弈",s:{A:2,D:1}},
+    {t:"灵魂深处的无声共鸣",s:{D:2,F:1}}]},
+  {q:"约会时你更喜欢的场景是？",o:[
+    {t:"宅家一起做饭、看电影、聊天",s:{F:2,C:1}},
+    {t:"去没去过的地方冒险和探索",s:{D:2,B:1}},
+    {t:"一起去书店/咖啡馆，安静各看各的",s:{D:2,A:1}},
+    {t:"约上三五好友一起热闹聚会",s:{B:2,F:1}}]},
+  {q:"如果把你的恋爱气场比作一种自然元素，最接近的是？",o:[
+    {t:"温暖和煦的阳光",s:{F:2,C:1}},
+    {t:"来去匆匆的暴雨",s:{B:2,E:1}},
+    {t:"轻柔缭绕的薄雾",s:{E:2,D:1}},
+    {t:"璀璨夺目的极光",s:{B:2,A:1}}]}
+];
+
+// ==================== 结果 ====================
+var R = {
+  A:{n:"温柔掌控者",e:"👑",tg:"表面温柔似水，内核稳如磐石",
+     d:"你给人的第一印象是温柔好相处，但走近之后才发现，关系节奏早已被你悄悄握在手心。你擅长用春风化雨的方式让对方心甘情愿地跟随你的步调。你不喜欢激烈的冲突，但有着不可动摇的底线。对方在不知不觉中已经被你拿捏住了一一而且是心甘情愿的那种。",
+     tr:"温柔 / 掌控力 / 高情商 / 不动声色",
+     m:"最适合你的伴侣是能欣赏你细腻掌控、愿意被你管理的人。炽热依赖者和治愈系甜心是你最理想的搭配。",
+     st:{a:88,b:92,c:65}},
+  B:{n:"炽热依赖者",e:"🔥",tg:"爱得浓烈，黏得坦荡",
+     d:"你的情感像一团燃烧的火焰一一炙热、滚烫、无法忽视。你爱一个人的时候，全世界都会知道。你需要大量的情感反馈和安全感，有时候会让对方觉得有点窒息，但你的真心和赤诚让人无法拒绝。你的依赖不是软弱，而是你表达爱的最高形式。",
+     tr:"热烈 / 依赖 / 赤诚 / 情绪充沛",
+     m:"你最适合理性守护者这样能给足安全感的伴侣，或者温柔掌控者这样能在热情中找到节奏的人。傲娇型会让你又爱又累。",
+     st:{a:72,b:90,c:40}},
+  C:{n:"理性守护者",e:"🛡️",tg:"爱在行动里，不在言语中",
+     d:"你从不多说废话。你不擅长甜言蜜语，但你会记住对方说过想吃的每一家店、会在对方疲惫时默默泡好一杯热茶。你是关系里最可靠的后盾，不张扬、不炫耀，但永远在线。有时候你可能显得有点直，但你的深沉和笃定是很多人求之不得的港湾。",
+     tr:"理性 / 忠诚 / 稳重 / 行动派",
+     m:"你最适合炽热依赖者这样能帮你打开情感开关的人，或者治愈系甜心这样和你互补的温暖伴侣。自由探索者可能会让你感到疏离。",
+     st:{a:80,b:72,c:55}},
+  D:{n:"自由探索者",e:"🌙",tg:"我爱你，但我也爱自由",
+     d:"你是一阵抓不住的风。你在关系中需要大量的个人空间和精神自由，最讨厌被束缚和定义。你的魅力恰恰在于那份不完全属于任何人的疏离感。你不是不爱，而是你表达爱的方式是一一我愿意和你在广阔天地间并肩行走，而不是被关在笼子里相互凝视。",
+     tr:"独立 / 知性 / 神秘 / 追求精神共鸣",
+     m:"你最适合同样独立的温柔掌控者，或者能和你思想对话的理性守护者。炽热依赖者的黏度会让你想要逃跑。傲娇小野猫的若即若离反而能激起你的兴趣。",
+     st:{a:65,b:85,c:95}},
+  E:{n:"傲娇小野猫",e:"😼",tg:"嘴上说不要，心里早沦陷",
+     d:"你是关系里最让人捉摸不透的存在。明明心里在意得要命，嘴上偏要说随便、无所谓。你的爱藏在一层薄薄的冰壳下面，懂你的人会看到冰壳下滚烫的心。你不太会直白地表达感情，但你的每一次口是心非、每一个偷偷的小心思，都是深度喜欢一个人的证据。",
+     tr:"傲娇 / 别扭 / 深情 / 反差萌",
+     m:"你最适合温柔掌控者这样能看穿你伪装的人，或者自由探索者这样能享受你忽近忽远节奏的伴侣。另一个傲娇会让你俩陷入谁先开口谁就输的死循环。",
+     st:{a:60,b:88,c:92}},
+  F:{n:"治愈系甜心",e:"🌸",tg:"你是港湾，也是春风",
+     d:"你的存在本身就是一种治愈。情绪稳定、共情力强，你在关系中总是那个提供温暖和安全感的一方。朋友们总说和你在一起就很安心。你的气场柔和而包容，不争不抢，但每个人都离不开你一一因为你在的地方，就是家。",
+     tr:"温柔 / 共情 / 治愈 / 情绪稳定",
+     m:"你几乎和所有类型都适配，但最适合你的是理性守护者这样能给你同样安全感的伴侣，或者炽热依赖者这样能激发你母性光辉的人。傲娇小野猫也会在你面前放下防备。",
+     st:{a:58,b:95,c:30}}
+};
+
+// ==================== 状态 ====================
+var cur = 0;
+var scores = {};
+var resultType = null;
+var isPaid = false;
+
+// ==================== DOM ====================
+var el = function(id){return document.getElementById(id);};
+var pgStart = el('page-start');
+var pgQuiz = el('page-quiz');
+var pgResult = el('page-result');
+var payWall = el('paywall');
+var LETTERS = ['A','B','C','D'];
+
+// 初始化分数
+for(var k in R){scores[k]=0;}
+
+// ==================== 页面切换 ====================
+function go(page){
+  pgStart.classList.add('hidden');
+  pgQuiz.classList.add('hidden');
+  pgResult.classList.add('hidden');
+  page.classList.remove('hidden');
+}
+
+// ==================== 开始 ====================
+function startQuiz(){
+  cur = 0;
+  for(var k in R){scores[k]=0;}
+  resultType = null;
+  isPaid = false;
+  go(pgQuiz);
+  renderQ();
+}
+
+// ==================== 渲染题目 ====================
+function renderQ(){
+  var q = Q[cur];
+  el('qtitle').textContent = q.q;
+  el('pbar').style.width = (cur / Q.length * 100) + '%';
+  el('pnum').textContent = (cur + 1) + ' / ' + Q.length;
+
+  var optEl = el('opts');
+  optEl.innerHTML = '';
+  for(var i = 0; i < q.o.length; i++){
+    (function(opt, idx){
+      var d = document.createElement('div');
+      d.className = 'option';
+      d.innerHTML = '<span class="opt-letter">' + LETTERS[idx] + '</span><span>' + opt.t + '</span>';
+      d.onclick = function(){
+        for(var t in opt.s){scores[t] += opt.s[t];}
+        if(cur < Q.length - 1){
+          cur++;
+          renderQ();
+        } else {
+          calcResult();
+          showPaywall();
+        }
+      };
+      optEl.appendChild(d);
+    })(q.o[i], i);
+  }
+}
+
+// ==================== 计算结果 ====================
+function calcResult(){
+  var max = -1;
+  for(var k in scores){
+    if(scores[k] > max){max = scores[k]; resultType = k;}
+  }
+  var tied = [];
+  for(var k in scores){if(scores[k] === max)tied.push(k);}
+  if(tied.length > 1) resultType = tied[Math.floor(Math.random() * tied.length)];
+}
+
+// ==================== 付费弹窗 ====================
+function showPaywall(){
+  var r = R[resultType];
+  el('blurprev').innerHTML = '<p>你属于【<b>' + r.n + '</b>】一一 ' + r.tg + '</p><p>' + r.d.substring(0, 40) + '……</p>';
+  payWall.classList.remove('hidden');
+}
+
+// ==================== 支付 ====================
+function handlePay(){
+  if(PAY.gateway === 'demo'){
+    // 演示模式：直接解锁
+    handleSuccess();
+  } else {
+    // 真实支付
+    startPay();
+  }
+}
+
+function startPay(){
+  var btn = el('btn-pay');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div>正在生成订单...';
+
+  var orderId = 'quiz_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
+  localStorage.setItem('quiz_type', resultType);
+  localStorage.setItem('quiz_scores', JSON.stringify(scores));
+
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', 'https://xorpay.com/api/pay');
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.onload = function(){
+    try {
+      var data = JSON.parse(xhr.responseText);
+      if(data.status === 'ok'){
+        window.location.href = data.pay_url || data.qrcode_url;
+      } else {
+        alert('支付接口错误：' + (data.msg || '请稍后重试'));
+        btn.disabled = false;
+        btn.innerHTML = '🔓 支付 ¥0.99 查看结果';
+      }
+    } catch(e){
+      alert('网络错误，请稍后重试');
+      btn.disabled = false;
+      btn.innerHTML = '🔓 支付 ¥0.99 查看结果';
+    }
+  };
+  xhr.onerror = function(){
+    alert('网络错误，请稍后重试');
+    btn.disabled = false;
+    btn.innerHTML = '🔓 支付 ¥0.99 查看结果';
+  };
+  xhr.send(JSON.stringify({
+    app_id: PAY.appId,
+    app_secret: PAY.appSecret,
+    amount: PAY.price.toFixed(2),
+    order_id: orderId,
+    pay_type: 'jsapi',
+    name: '关系气场测评结果',
+    return_url: window.location.href.split('?')[0] + '?order=' + orderId
+  }));
+}
+
+// 支付回调恢复
+function checkCallback(){
+  var m = window.location.search.match(/order=([^&]+)/);
+  if(m && !isPaid){
+    var t = localStorage.getItem('quiz_type');
+    if(t){
+      resultType = t;
+      var ss = localStorage.getItem('quiz_scores');
+      if(ss) scores = JSON.parse(ss);
+      localStorage.removeItem('quiz_type');
+      localStorage.removeItem('quiz_scores');
+      handleSuccess();
+    }
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+}
+
+function handleSuccess(){
+  isPaid = true;
+  payWall.classList.add('hidden');
+  showResult();
+}
+
+// ==================== 结果展示 ====================
+function showResult(){
+  var r = R[resultType];
+  go(pgResult);
+
+  var html = '';
+  html += '<div class="result-emoji">' + r.e + '</div>';
+  html += '<div class="result-name">' + r.n + '</div>';
+  html += '<div class="result-tagline">"' + r.tg + '"</div>';
+  html += '<div class="stats">';
+  html += '<div class="stat"><div class="stat-val">' + r.st.a + '</div><div class="stat-lbl">掌控力</div></div>';
+  html += '<div class="stat"><div class="stat-val">' + r.st.b + '</div><div class="stat-lbl">吸引力</div></div>';
+  html += '<div class="stat"><div class="stat-val">' + r.st.c + '</div><div class="stat-lbl">神秘感</div></div>';
+  html += '</div>';
+  html += '<div class="r-section"><h4>🔮 气场解析</h4><p>' + r.d + '</p></div>';
+  html += '<div class="r-section"><h4>✨ 气场标签</h4><p>' + r.tr + '</p></div>';
+  html += '<div class="r-section"><h4>💞 最佳搭档</h4><p>' + r.m + '</p></div>';
+
+  el('rcard').innerHTML = html;
+}
+
+// ==================== 分享 ====================
+function doShare(){
+  var r = R[resultType];
+  var text = '🔮 我的关系气场类型是【' + r.n + '】一一' + r.tg + '\n快来看看你是什么类型！';
+  if(navigator.share){
+    navigator.share({title:'关系气场测评',text:text,url:window.location.href}).catch(function(){});
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value = text + '\n' + window.location.href;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    alert('已复制分享文案到剪贴板，快去发给朋友吧！');
+  }
+}
+
+// ==================== 绑定事件 ====================
+el('btn-start').onclick = startQuiz;
+el('btn-pay').onclick = handlePay;
+el('btn-retry').onclick = startQuiz;
+el('btn-share').onclick = doShare;
+
+// 检查支付回调
+checkCallback();
+</script>
+</body>
+</html>
