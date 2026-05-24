@@ -69,6 +69,12 @@ body::before{
 .blur-preview{margin:20px 0;padding:20px;border-radius:16px;background:rgba(20,12,36,.6);filter:blur(8px);user-select:none;pointer-events:none;font-size:14px;color:#a898b8;line-height:1.7}
 .pay-lock{font-size:12px;color:#a898b8;margin:10px 0 4px}
 .pay-count{font-size:11px;color:rgba(180,150,200,.35);margin-top:8px}
+.qr-box{display:inline-block;padding:12px;background:#fff;border-radius:16px;margin:8px 0}
+.qr-box img{width:180px;height:180px;display:block;border-radius:8px}
+.qr-hint{font-size:12px;color:#a898b8;margin:6px 0 12px;line-height:1.6}
+.unlock-input{width:100%;max-width:220px;padding:10px 14px;border-radius:12px;border:1.5px solid rgba(200,160,220,.3);background:rgba(20,12,36,.6);color:#f0e6f6;font-size:16px;text-align:center;letter-spacing:2px;outline:none;margin:0 auto;display:block}
+.unlock-input:focus{border-color:#d478c5}
+.unlock-err{color:#ff6b7a;font-size:12px;margin-top:6px;display:none}
 
 /* ===== 结果页 ===== */
 #page-result{min-height:calc(100vh - 40px);display:flex;flex-direction:column}
@@ -125,11 +131,25 @@ body::before{
       <div>🔒</div>
       <h3>你的气场分析已生成</h3>
       <div class="price"><span>¥</span>0.99</div>
-      <p class="pay-lock">支付后立即解锁完整结果</p>
+      <p class="pay-lock">扫码支付后输入解锁码查看结果</p>
+
+      <!-- 替换为你自己的微信赞赏码图片 -->
+      <div class="qr-box">
+        <img src="qrcode.png" alt="微信赞赏码" id="qr-img" onerror="this.style.display='none';document.getElementById('qr-placeholder').style.display='block'">
+        <div id="qr-placeholder" style="display:none;width:180px;height:180px;background:rgba(40,28,60,.6);border-radius:8px;display:none;align-items:center;justify-content:center;color:#a898b8;font-size:13px">
+          请将微信赞赏码<br>保存为 qrcode.png<br>放在同目录下
+        </div>
+      </div>
+
+      <p class="qr-hint">微信扫码支付 ¥0.99 →<br>截图发给客服微信获取解锁码</p>
+
       <div class="blur-preview" id="blurprev">
         <p>你属于【秘密类型】——表面上看你是一个温和的人，但内心有着非常清晰的边界和底线。在关系中你倾向于先观察再行动……</p>
       </div>
-      <button class="btn" id="btn-pay">🔓 支付 ¥0.99 查看结果</button>
+
+      <input class="unlock-input" id="unlock-code" type="text" placeholder="输入8位解锁码" maxlength="8" autocomplete="off">
+      <div class="unlock-err" id="unlock-err">解锁码无效或已使用</div>
+      <button class="btn" id="btn-pay" style="margin-top:10px">🔓 解锁查看结果</button>
       <p class="pay-count">已有 <b style="color:#d478c5">3,827</b> 人解锁查看</p>
     </div>
   </div>
@@ -137,13 +157,15 @@ body::before{
 </div>
 
 <script>
-// ==================== 支付配置 ====================
-var PAY = {
-  gateway: 'demo',  // 改成 'xorpay' 接入真实支付
-  appId: '',        // xorpay app id
-  appSecret: '',    // xorpay app secret
-  price: 0.99
-};
+// ==================== 解锁码（客服发给付费用户的码）====================
+var VALID_CODES = [
+  'K9M2X7P4', 'R3T8W1L5', 'D6V2N8Q3', 'H1Y5C9J2', 'S4F7B0X6',
+  'M8W3P1K7', 'T2L9R4D8', 'V6C0H5Y1', 'N3X8J2S4', 'B7Q1F6M9',
+  'W5K0T3L8', 'P2D7R1V6', 'C9H4N8X2', 'J3S5Y0B7', 'F1M6Q4K9',
+  'L8R2W5T0', 'X4V1C3H8', 'Y7B9N6J2', 'Q0K3S1F5', 'D4M8P2L7',
+  'A6T9R0W3', 'E1V5X8K2', 'G7H0C4N9', 'I3Y6B1Q5', 'O8S2J7F0',
+  'U4M1W9L3', 'Z0P6T5R8', 'K7D2V4X1', 'R9C8H3N6', 'M5Y0J2S4'
+]
 
 // ==================== 题目 ====================
 var Q = [
@@ -325,83 +347,49 @@ function showPaywall(){
   payWall.classList.remove('hidden');
 }
 
-// ==================== 支付 ====================
+// ==================== 解锁码验证 ====================
 function handlePay(){
-  if(PAY.gateway === 'demo'){
-    // 演示模式：直接解锁
-    handleSuccess();
-  } else {
-    // 真实支付
-    startPay();
+  var code = el('unlock-code').value.trim().toUpperCase();
+  var errEl = el('unlock-err');
+
+  if(!code || code.length < 8){
+    errEl.textContent = '请输入完整解锁码';
+    errEl.style.display = 'block';
+    return;
   }
-}
 
-function startPay(){
-  var btn = el('btn-pay');
-  btn.disabled = true;
-  btn.innerHTML = '<div class="spinner"></div>正在生成订单...';
-
-  var orderId = 'quiz_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
-  localStorage.setItem('quiz_type', resultType);
-  localStorage.setItem('quiz_scores', JSON.stringify(scores));
-
-  var xhr = new XMLHttpRequest();
-  xhr.open('POST', 'https://xorpay.com/api/pay');
-  xhr.setRequestHeader('Content-Type', 'application/json');
-  xhr.onload = function(){
-    try {
-      var data = JSON.parse(xhr.responseText);
-      if(data.status === 'ok'){
-        window.location.href = data.pay_url || data.qrcode_url;
-      } else {
-        alert('支付接口错误：' + (data.msg || '请稍后重试'));
-        btn.disabled = false;
-        btn.innerHTML = '🔓 支付 ¥0.99 查看结果';
-      }
-    } catch(e){
-      alert('网络错误，请稍后重试');
-      btn.disabled = false;
-      btn.innerHTML = '🔓 支付 ¥0.99 查看结果';
-    }
-  };
-  xhr.onerror = function(){
-    alert('网络错误，请稍后重试');
-    btn.disabled = false;
-    btn.innerHTML = '🔓 支付 ¥0.99 查看结果';
-  };
-  xhr.send(JSON.stringify({
-    app_id: PAY.appId,
-    app_secret: PAY.appSecret,
-    amount: PAY.price.toFixed(2),
-    order_id: orderId,
-    pay_type: 'jsapi',
-    name: '关系气场测评结果',
-    return_url: window.location.href.split('?')[0] + '?order=' + orderId
-  }));
-}
-
-// 支付回调恢复
-function checkCallback(){
-  var m = window.location.search.match(/order=([^&]+)/);
-  if(m && !isPaid){
-    var t = localStorage.getItem('quiz_type');
-    if(t){
-      resultType = t;
-      var ss = localStorage.getItem('quiz_scores');
-      if(ss) scores = JSON.parse(ss);
-      localStorage.removeItem('quiz_type');
-      localStorage.removeItem('quiz_scores');
-      handleSuccess();
-    }
-    window.history.replaceState({}, '', window.location.pathname);
+  // 检查是否有效码
+  if(VALID_CODES.indexOf(code) === -1){
+    errEl.textContent = '解锁码无效';
+    errEl.style.display = 'block';
+    return;
   }
-}
 
-function handleSuccess(){
+  // 检查是否已被使用（localStorage 记录）
+  var used = JSON.parse(localStorage.getItem('used_codes') || '{}');
+  if(used[code]){
+    errEl.textContent = '该解锁码已被使用';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  // 标记已使用
+  used[code] = Date.now();
+  localStorage.setItem('used_codes', JSON.stringify(used));
+
+  // 解锁
+  errEl.style.display = 'none';
   isPaid = true;
   payWall.classList.add('hidden');
   showResult();
 }
+
+// 输入框回车提交
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Enter' && !payWall.classList.contains('hidden')){
+    handlePay();
+  }
+});
 
 // ==================== 结果展示 ====================
 function showResult(){
@@ -447,8 +435,6 @@ el('btn-pay').onclick = handlePay;
 el('btn-retry').onclick = startQuiz;
 el('btn-share').onclick = doShare;
 
-// 检查支付回调
-checkCallback();
 </script>
 </body>
 </html>
